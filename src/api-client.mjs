@@ -22,9 +22,10 @@ export class ApiClient {
         method,
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
+        signal: AbortSignal.timeout(8_000),
       });
     } catch (error) {
-      throw new HowToError("NETWORK_ERROR", "无法连接 HowTo Cloud。", { cause: error });
+      throw new HowToError("ONLINE_ENDPOINT_UNAVAILABLE", "无法连接 HowTo Cloud；可改用明确的 --offline 激活流程。", { cause: error });
     }
     if (!response.ok) {
       let payload = {};

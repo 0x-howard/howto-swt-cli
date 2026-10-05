@@ -1,8 +1,9 @@
 import readline from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { Writable } from "node:stream";
-import { checkUpdate, getStatus, installProduct, updateProduct } from "./commands.mjs";
+import { activateOffline, checkUpdate, getStatus, installProduct, updateProduct } from "./commands.mjs";
 import { HowToError } from "./errors.mjs";
+import { loadOfflineRequest } from "./local-state.mjs";
 
 function parseArgs(argv) {
   const positionals = [];
@@ -14,7 +15,7 @@ function parseArgs(argv) {
       continue;
     }
     const [rawKey, inline] = token.slice(2).split("=", 2);
-    if (["json", "auto"].includes(rawKey)) flags[rawKey] = true;
+    if (["json", "auto", "offline"].includes(rawKey)) flags[rawKey] = true;
     else flags[rawKey] = inline ?? argv[++index];
   }
   return { positionals, flags };
@@ -36,6 +37,20 @@ async function promptForCode() {
   }
 }
 
+async function promptForActivationToken() {
+  if (!stdin.isTTY) throw new HowToError("ACTIVATION_TOKEN_REQUIRED", "非交互环境请使用 --activation-token 提供 Token。");
+  const hiddenOutput = new Writable({ write(_chunk, _encoding, callback) { callback(); } });
+  const input = readline.createInterface({ input: stdin, output: hiddenOutput, terminal: true });
+  stdout.write("请粘贴 Activation Token（输入内容不会显示）：");
+  try {
+    const token = (await input.question("")).trim();
+    stdout.write("\n");
+    return token;
+  } finally {
+    input.close();
+  }
+}
+
 function printResult(result, json) {
   if (json) return stdout.write(`${JSON.stringify(result)}\n`);
   if (result.status === "UPDATE_AVAILABLE") {
@@ -49,6 +64,11 @@ function printResult(result, json) {
       `HowTo SWT Pro\nInstalled: ${installed}\nEntitlement: ${entitlement}\nUpdate: ${update}\n`,
     );
   }
+  if (result.status === "OFFLINE_ACTIVATION_REQUIRED") {
+    return stdout.write(
+      `OFFLINE_ACTIVATION_REQUIRED\nVersion: ${result.version}\nActivation URL:\n${result.activation_url}\n\nActivation Request:\n${result.activation_request}\n`,
+    );
+  }
   stdout.write(`${result.status}: ${result.product || "howto"}${result.version ? ` v${result.version}` : ""}\n`);
 }
 
@@ -59,20 +79,33 @@ export async function main(argv) {
     agent: flags.agent,
     installRoot: flags["install-root"],
     baseUrl: flags["api-base-url"],
+    manifestUrl: flags["manifest-url"],
+    activationUrl: flags["activation-url"],
   };
   let result;
   if (command === "install") {
-    result = await installProduct(product, { ...common, email: flags.email, code: flags.code, codeProvider: promptForCode });
+    let activationToken = flags["activation-token"];
+    if (flags.offline && !activationToken && await loadOfflineRequest(process.env)) activationToken = await promptForActivationToken();
+    result = await installProduct(product, {
+      ...common,
+      email: flags.email,
+      code: flags.code,
+      codeProvider: promptForCode,
+      offline: Boolean(flags.offline),
+      activationToken,
+    });
   } else if (command === "update") {
     result = await updateProduct(product, common);
   } else if (command === "check-update") {
-    result = await checkUpdate(product, { ...common, auto: Boolean(flags.auto) });
+    result = await checkUpdate(product, { ...common, auto: Boolean(flags.auto), offline: Boolean(flags.offline) });
+  } else if (command === "activate") {
+    result = await activateOffline(product, common);
   } else if (command === "status") {
     result = await getStatus(common);
   } else {
     throw new HowToError(
       "USAGE",
-      "用法：howto install howto-swt-pro --email EMAIL [--agent codex] | update howto-swt-pro | status | check-update howto-swt-pro",
+      "用法：howto install howto-swt-pro [--offline] [--email EMAIL] [--agent codex|doubao-work] | activate howto-swt-pro | update howto-swt-pro | status | check-update howto-swt-pro",
       { exitCode: 2 },
     );
   }

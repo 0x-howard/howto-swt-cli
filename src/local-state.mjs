@@ -15,6 +15,8 @@ export function statePaths(env = process.env) {
     config: path.join(root, "config.json"),
     updates: path.join(root, "update-state.json"),
     device: path.join(root, "device.json"),
+    offlineDeviceKey: path.join(root, "offline-device-key.json"),
+    offlineRequest: path.join(root, "offline-request.json"),
   };
 }
 
@@ -74,4 +76,25 @@ export async function loadOrCreateDevice({ agent = "generic", env = process.env 
   };
   await writePrivateJson(file, device);
   return device;
+}
+
+export async function loadOfflineDeviceKey(env = process.env) {
+  return readJson(statePaths(env).offlineDeviceKey, null);
+}
+
+export async function loadOrCreateOfflineDeviceKey(env = process.env) {
+  const existing = await loadOfflineDeviceKey(env);
+  if (existing?.algorithm === "X25519" && existing.private_key_pkcs8 && existing.public_key_spki) return existing;
+  const { generateX25519DeviceKey } = await import("./offline-crypto.mjs");
+  const key = { ...generateX25519DeviceKey(), created_at: new Date().toISOString() };
+  await writePrivateJson(statePaths(env).offlineDeviceKey, key);
+  return key;
+}
+
+export async function loadOfflineRequest(env = process.env) {
+  return readJson(statePaths(env).offlineRequest, null);
+}
+
+export async function saveOfflineRequest(request, env = process.env) {
+  await writePrivateJson(statePaths(env).offlineRequest, request);
 }

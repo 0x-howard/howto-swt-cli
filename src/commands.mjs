@@ -2,6 +2,7 @@ import { ApiClient } from "./api-client.mjs";
 import { resolveAdapter } from "./adapters/index.mjs";
 import { installArchive, verifyInstalledPackage } from "./installer.mjs";
 import { compareVersions } from "./semver.mjs";
+import { checkOfflineUpdate, createOfflineActivationRequest, installOfflineProduct } from "./offline.mjs";
 import {
   loadAuth,
   loadConfig,
@@ -40,6 +41,7 @@ function makeApi({ baseUrl, fetchImpl, token }) {
 
 export async function installProduct(product, options = {}) {
   requireProduct(product);
+  if (options.offline) return installOfflineProduct(product, options);
   if (!options.email) throw new HowToError("EMAIL_REQUIRED", "首次安装需要 --email。");
   const email = normalizeEmail(options.email);
   const ctx = await context(options);
@@ -129,6 +131,7 @@ export async function updateProduct(product, options = {}) {
 
 export async function checkUpdate(product, options = {}) {
   requireProduct(product);
+  if (options.offline) return checkOfflineUpdate(product, options);
   const ctx = await context(options);
   const nowMs = options.now?.() || Date.now();
   const state = await loadUpdateState(ctx.env);
@@ -167,6 +170,11 @@ export async function checkUpdate(product, options = {}) {
     if (options.auto) return { status: "CHECK_SKIPPED_UNAVAILABLE", product };
     throw error;
   }
+}
+
+export async function activateOffline(product, options = {}) {
+  requireProduct(product);
+  return createOfflineActivationRequest(product, options);
 }
 
 export async function getStatus(options = {}) {

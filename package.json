@@ -1,7 +1,7 @@
 {
   "name": "howto-swt-cli",
-  "version": "0.1.0",
-  "description": "Public installer and updater for HowTo SWT products",
+  "version": "0.2.0",
+  "description": "Online and offline installer for HowTo SWT Pro",
   "type": "module",
   "bin": {
     "howto": "./bin/howto.mjs"
