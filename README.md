@@ -13,27 +13,27 @@
 ```bash
 # 首次安装：请求邮件验证码，验证后下载并安装
 HOWTO_API_BASE_URL="https://howto-swt-api-staging.howto-cloud.workers.dev" \
-  npx -y github:0x-howard/howto-swt-cli \
+  npx -y --allow-git=root github:0x-howard/howto-swt-cli \
   install howto-swt-pro --email user@example.com --agent codex
 
 # 明确更新：会重新检查会员资格并在成功校验后替换
 HOWTO_API_BASE_URL="https://howto-swt-api-staging.howto-cloud.workers.dev" \
-  npx -y github:0x-howard/howto-swt-cli update howto-swt-pro --agent codex
+  npx -y --allow-git=root github:0x-howard/howto-swt-cli update howto-swt-pro --agent codex
 
 # 查看本机授权、安装和版本状态；配置 API 后也核验会员与最新版
 HOWTO_API_BASE_URL="https://howto-swt-api-staging.howto-cloud.workers.dev" \
-  npx -y github:0x-howard/howto-swt-cli status --agent codex
+  npx -y --allow-git=root github:0x-howard/howto-swt-cli status --agent codex
 
 # 手动检查版本；只报告，不安装
 HOWTO_API_BASE_URL="https://howto-swt-api-staging.howto-cloud.workers.dev" \
-  npx -y github:0x-howard/howto-swt-cli check-update howto-swt-pro
+  npx -y --allow-git=root github:0x-howard/howto-swt-cli check-update howto-swt-pro
 
 # Pro hook 使用；24 小时内不会再次请求，服务不可用时静默跳过
 HOWTO_API_BASE_URL="https://howto-swt-api-staging.howto-cloud.workers.dev" \
-  npx -y github:0x-howard/howto-swt-cli check-update howto-swt-pro --auto --json
+  npx -y --allow-git=root github:0x-howard/howto-swt-cli check-update howto-swt-pro --auto --json
 ```
 
-仓库公开后，`npx -y github:0x-howard/howto-swt-cli ...` 会从 GitHub 获取 CLI。本地开发可用：
+`--allow-git=root` 是 npm 12 从 GitHub 获取这个根包所需的最小授权；它不会允许任意传递依赖从 Git 获取。上述命令会从 GitHub 获取 CLI，不使用本地源码或 npm Registry。本地开发可用：
 
 ```bash
 /path/to/node ./bin/howto.mjs status --agent codex
