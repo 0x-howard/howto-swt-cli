@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const findings = [];
 const forbiddenNames = new Set([".env", ".dev.vars", "auth.json", "update-state.json", "device.json", "offline-device-key.json", "offline-request.json"]);
+const forbiddenDirectories = new Set(["howto-swt-pro", "howto-cloud", "howto-admin", "workspace-docs", "_archive-before-refactor", "USER_DATA"]);
 const patterns = [
   ["Resend API key", /(?<![A-Za-z0-9_])re_[A-Za-z0-9_]{20,}/],
   ["session token", /session_token["'\s]*:[\s]*["'][A-Za-z0-9._-]{24,}["']/i],
@@ -20,10 +21,14 @@ async function visit(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (["node_modules", ".git", "coverage"].includes(entry.name)) continue;
     const file = path.join(directory, entry.name);
-    if (entry.isDirectory()) { await visit(file); continue; }
+    if (entry.isDirectory()) {
+      if (forbiddenDirectories.has(entry.name)) findings.push(`${path.relative(root, file)}: forbidden private directory`);
+      await visit(file);
+      continue;
+    }
     const relative = path.relative(root, file);
     if (forbiddenNames.has(entry.name)) findings.push(`${relative}: forbidden local state`);
-    if ([".zip", ".pem", ".key", ".p12", ".tgz", ".bundle", ".enc"].includes(path.extname(file).toLowerCase())) findings.push(`${relative}: forbidden private artifact`);
+    if ([".zip", ".pem", ".key", ".p12", ".pfx", ".tgz", ".bundle", ".enc", ".sqlite", ".db"].includes(path.extname(file).toLowerCase())) findings.push(`${relative}: forbidden private artifact`);
     if (![".js", ".mjs", ".json", ".md", ".txt", ""].includes(path.extname(file).toLowerCase())) continue;
     const text = await readFile(file, "utf8").catch(() => "");
     for (const [label, regex] of patterns) if (regex.test(text)) findings.push(`${relative}: ${label}`);

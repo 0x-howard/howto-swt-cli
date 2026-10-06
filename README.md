@@ -1,6 +1,8 @@
 # HowTo SWT CLI
 
-`howto-swt-cli` 是免费的 HowTo SWT Pro 安装与更新工具。HowTo SWT Pro 仅向有资格的陪跑营会员开放；用户使用登记邮箱和邮件 OTP 完成认证。
+产品入口：[HowTo SWT Free](https://github.com/0x-howard/howto-swt) · [HowTo SWT Pro](https://github.com/0x-howard/howto-swt-pro-dist)
+
+`howto-swt-cli` 是 HowTo SWT Pro 官方安装与更新 CLI，提供 Online install、Offline Activation 与 Agent adapters。HowTo SWT Pro 仅向有资格的陪跑营会员开放；用户使用登记邮箱和邮件 OTP 完成认证。
 
 ## 当前 Pilot
 
@@ -60,7 +62,7 @@ npx -y --allow-git=root github:0x-howard/howto-swt-cli \
   install howto-swt-pro --offline --agent doubao-work
 ```
 
-CLI 会在本地验签，确认 product、version、request 和 device binding，从公开的 [`howto-swt-dist`](https://github.com/0x-howard/howto-swt-dist) 下载加密 Bundle，校验 ciphertext SHA-256，解包 device-bound release key，执行 AES-256-GCM 解密，再沿用安全 ZIP 安装流程。release key 和明文 ZIP 不会写入日志或公共缓存。
+CLI 会在本地验签，确认 product、version、request 和 device binding，从公开的 [`howto-swt-pro-dist`](https://github.com/0x-howard/howto-swt-pro-dist) 下载加密 Bundle，校验 ciphertext SHA-256，解包 device-bound release key，执行 AES-256-GCM 解密，再沿用安全 ZIP 安装流程。release key 和明文 ZIP 不会写入日志或公共缓存。
 
 豆包 Work 会依次检测以下已知 Skill 根目录：
 

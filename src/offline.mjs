@@ -24,7 +24,7 @@ import {
   verifyActivationToken,
 } from "./offline-crypto.mjs";
 
-export const DEFAULT_OFFLINE_MANIFEST_URL = "https://raw.githubusercontent.com/0x-howard/howto-swt-dist/main/manifest.json";
+export const DEFAULT_OFFLINE_MANIFEST_URL = "https://raw.githubusercontent.com/0x-howard/howto-swt-pro-dist/main/manifest.json";
 export const DEFAULT_ACTIVATION_URL = "https://howto-swt-api-staging.howto-cloud.workers.dev/activate";
 
 function manifestUrl(options) {
