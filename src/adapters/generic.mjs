@@ -11,6 +11,7 @@ export function genericAdapter({ env = process.env, installRoot } = {}) {
   }
   return {
     name: "generic",
+    layout: "package",
     root: path.resolve(root),
     destination(product) {
       return path.join(this.root, product);

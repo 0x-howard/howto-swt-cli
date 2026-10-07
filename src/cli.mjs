@@ -15,7 +15,7 @@ function parseArgs(argv) {
       continue;
     }
     const [rawKey, inline] = token.slice(2).split("=", 2);
-    if (["json", "auto", "offline"].includes(rawKey)) flags[rawKey] = true;
+    if (["json", "auto", "offline", "confirm-replace"].includes(rawKey)) flags[rawKey] = true;
     else flags[rawKey] = inline ?? argv[++index];
   }
   return { positionals, flags };
@@ -54,7 +54,16 @@ async function promptForActivationToken() {
 function printResult(result, json) {
   if (json) return stdout.write(`${JSON.stringify(result)}\n`);
   if (result.status === "UPDATE_AVAILABLE") {
-    return stdout.write(`🔔 HowTo SWT Pro 有新版本 v${result.latest_version}。\n本次更新：${result.summary}\n回复 1 即可更新。\n`);
+    const label = result.product === "howto-swt" ? "HowTo SWT Free" : "HowTo SWT Pro";
+    return stdout.write(`🔔 ${label} 有新版本 v${result.latest_version}。\n本次更新：${result.summary || "详见发布说明"}\n回复 1 即可更新。\n`);
+  }
+  if (result.status === "ENTITLEMENT_EXPIRED") {
+    return stdout.write("当前已安装版本可以继续使用。\n检测到新版本，但会员更新权限已到期。\n");
+  }
+  if (result.status === "EDITION_REPLACE_CONFIRMATION_REQUIRED") {
+    return stdout.write(
+      `EDITION_REPLACE_CONFIRMATION_REQUIRED\nInstalled: ${result.installed_edition} v${result.installed_version}\nTarget: ${result.target_edition}\n确认替换后重新运行命令并加 --confirm-replace。\n`,
+    );
   }
   if (result.status === "STATUS") {
     const installed = result.update_state?.installed_version || "not installed";
@@ -80,7 +89,9 @@ export async function main(argv) {
     installRoot: flags["install-root"],
     baseUrl: flags["api-base-url"],
     manifestUrl: flags["manifest-url"],
+    freeManifestUrl: flags["free-manifest-url"],
     activationUrl: flags["activation-url"],
+    replaceConfirmed: Boolean(flags["confirm-replace"]),
   };
   let result;
   if (command === "install") {
@@ -105,7 +116,7 @@ export async function main(argv) {
   } else {
     throw new HowToError(
       "USAGE",
-      "用法：howto install howto-swt-pro [--offline] [--email EMAIL] [--agent codex|doubao-work] | activate howto-swt-pro | update howto-swt-pro | status | check-update howto-swt-pro",
+      "用法：howto install howto-swt|howto-swt-pro [--offline] [--confirm-replace] [--agent codex|workbuddy|doubao-work] | activate howto-swt-pro | update PRODUCT | status | check-update PRODUCT",
       { exitCode: 2 },
     );
   }

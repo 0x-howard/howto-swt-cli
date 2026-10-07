@@ -31,6 +31,7 @@ export function doubaoWorkAdapter({ env = process.env, installRoot } = {}) {
   }
   return {
     name: "doubao-work",
+    layout: "package",
     root: resolved,
     destination(product) { return path.join(resolved, product); },
   };

@@ -55,8 +55,9 @@ export function makeZip(entries) {
 }
 
 export function packageZip(version, product = "howto-swt-pro") {
+  const skills = ["swt", "swt-application", "swt-position", "swt-english", "swt-visa", "swt-arrival"];
   return makeZip([
     { name: "plugin.json", data: JSON.stringify({ name: product, version }) },
-    { name: "skills/swt/SKILL.md", data: `---\nname: swt\n---\nversion ${version}\n` },
+    ...skills.map((skill) => ({ name: `skills/${skill}/SKILL.md`, data: `---\nname: ${skill}\n---\nversion ${version}\n` })),
   ]);
 }

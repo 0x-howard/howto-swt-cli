@@ -2,7 +2,8 @@ import crypto from "node:crypto";
 import { rm } from "node:fs/promises";
 import { resolveAdapter } from "./adapters/index.mjs";
 import { HowToError } from "./errors.mjs";
-import { installArchive, sha256 as archiveSha256 } from "./installer.mjs";
+import { installRuntimeArchive, sha256 as archiveSha256 } from "./installer.mjs";
+import { editionPreflight } from "./runtime.mjs";
 import {
   loadOfflineDeviceKey,
   loadOfflineRequest,
@@ -96,6 +97,9 @@ function validateTokenPayload(payload, pending, device, deviceKey, product) {
 
 export async function installOfflineProduct(product, options = {}) {
   const env = options.env || process.env;
+  const adapter = resolveAdapter({ agent: options.agent, installRoot: options.installRoot, config: options.config, env });
+  const preflight = await editionPreflight(adapter, "pro", { replaceConfirmed: options.replaceConfirmed });
+  if (["EDITION_REPLACE_CONFIRMATION_REQUIRED", "EDITION_CONFLICT"].includes(preflight.status)) return preflight;
   if (!options.activationToken) return createOfflineActivationRequest(product, options);
   const pending = await loadOfflineRequest(env);
   if (!pending) throw new HowToError("OFFLINE_REQUEST_REQUIRED", "请先生成 Offline Activation Request。");
@@ -120,15 +124,18 @@ export async function installOfflineProduct(product, options = {}) {
   try {
     releaseKey = unwrapReleaseKey(payload, deviceKey.private_key_pkcs8);
     archive = decryptBundle(encrypted, releaseKey, product, payload.version);
-    const adapter = resolveAdapter({ agent: options.agent, installRoot: options.installRoot, config: options.config, env });
-    const installed = await installArchive({
+    const installed = await installRuntimeArchive({
       archive,
       expectedSha256: archiveSha256(archive),
       product,
       version: payload.version,
-      destination: adapter.destination(product),
+      adapter,
+      replaceConfirmed: options.replaceConfirmed,
+      installedAt: options.installedAt,
       verify: options.verify,
+      verifyFlat: options.verifyFlat,
     });
+    if (installed.status === "EDITION_REPLACE_CONFIRMATION_REQUIRED") return installed;
     const state = await loadUpdateState(env);
     state[product] = {
       installed_version: payload.version,

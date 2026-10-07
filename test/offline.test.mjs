@@ -47,7 +47,7 @@ test("valid activation token unwraps, decrypts, safely installs, and cleans stag
   const result = await installOfflineProduct(product, { env: f.env, fetchImpl: f.fetchImpl, activationToken: f.token, signingPublicKey: f.keys.publicKeySpki, agent: "generic", installRoot });
   assert.equal(result.status, "INSTALLED");
   assert.equal(result.activation, "offline");
-  assert.match(await readFile(path.join(installRoot, product, "skills/swt/SKILL.md"), "utf8"), /1\.0\.1/);
+  assert.match(await readFile(path.join(installRoot, "howto-swt", "skills/swt/SKILL.md"), "utf8"), /1\.0\.1/);
   await assert.rejects(access(statePaths(f.env).offlineRequest), { code: "ENOENT" });
   assert.equal((await readdir(installRoot)).some((name) => name.includes(".stage-") || name.includes(".backup-")), false);
 });

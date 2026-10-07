@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
+import { access, mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { checkUpdate, CHECK_INTERVAL_MS, getStatus } from "../src/commands.mjs";
 import { saveAuth, saveUpdateState } from "../src/local-state.mjs";
-import { installArchive, sha256 } from "../src/installer.mjs";
+import { installRuntimeArchive, sha256 } from "../src/installer.mjs";
+import { genericAdapter } from "../src/adapters/generic.mjs";
 import { packageZip } from "./helpers/zip.mjs";
 
 test("automatic update checks use a 24 hour cache", async () => {
@@ -58,12 +59,13 @@ test("status verifies installation, entitlement, and cloud version", async () =>
   const installRoot = path.join(home, "skills");
   const env = { HOWTO_HOME: home };
   const archive = packageZip("1.0.0");
-  await installArchive({
+  await installRuntimeArchive({
     archive,
     expectedSha256: sha256(archive),
     product: "howto-swt-pro",
     version: "1.0.0",
-    destination: path.join(installRoot, "howto-swt-pro"),
+    adapter: genericAdapter({ installRoot }),
+    installedAt: "2026-10-04T00:00:00Z",
   });
   await saveAuth({
     product: "howto-swt-pro",
@@ -84,4 +86,28 @@ test("status verifies installation, entitlement, and cloud version", async () =>
   assert.equal(result.entitlement.status, "active");
   assert.equal(result.latest_version, "1.0.1");
   assert.equal(result.update, "available");
+});
+
+test("Free update check reports but never applies", async () => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "howto-free-check-"));
+  const env = { HOWTO_HOME: home };
+  await saveUpdateState({ "howto-swt": { installed_version: "1.1.1", last_checked: null } }, env);
+  const fetchImpl = async () => jsonResponse({ schema_version: 1, product: "howto-swt", version: "1.2.0",
+    summary: "Architecture", sha256: "a".repeat(64), asset_url: "https://example.invalid/free.zip" });
+  const result = await checkUpdate("howto-swt", { env, fetchImpl, now: () => Date.parse("2026-10-07T00:00:00Z") });
+  assert.equal(result.status, "UPDATE_AVAILABLE");
+  await assert.rejects(access(path.join(home, "skills")), { code: "ENOENT" });
+});
+
+test("expired Pro entitlement keeps installed version and returns machine status", async () => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "howto-expired-check-"));
+  const env = { HOWTO_HOME: home };
+  await saveAuth({ product: "howto-swt-pro", email: "member@example.com", session_token: "x".repeat(43), issued_at: "2026-10-01T00:00:00Z" }, env);
+  await saveUpdateState({ "howto-swt-pro": { installed_version: "1.0.1", last_checked: null } }, env);
+  const fetchImpl = async (url) => url.endsWith("/entitlement")
+    ? jsonResponse({ product: "howto-swt-pro", status: "expired", updates_allowed: false })
+    : jsonResponse({ code: "NOT_FOUND" }, 404);
+  const result = await checkUpdate("howto-swt-pro", { env, baseUrl: "https://mock.local", fetchImpl,
+    now: () => Date.parse("2026-10-07T00:00:00Z") });
+  assert.deepEqual(result, { status: "ENTITLEMENT_EXPIRED", product: "howto-swt-pro", current_version: "1.0.1" });
 });
