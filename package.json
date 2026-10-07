@@ -1,13 +1,14 @@
 {
   "name": "howto-swt-cli",
-  "version": "0.2.0",
-  "description": "Online and offline installer for HowTo SWT Pro",
+  "version": "0.3.0",
+  "description": "Guarded Free and Pro runtime installer for HowTo SWT",
   "type": "module",
   "bin": {
     "howto": "./bin/howto.mjs"
   },
   "scripts": {
     "test": "node --test",
+    "release:check": "node scripts/check-release-docs.mjs",
     "public:check": "node scripts/audit-public.mjs",
     "audit:public": "node scripts/audit-public.mjs",
     "prepack": "node scripts/audit-public.mjs"
